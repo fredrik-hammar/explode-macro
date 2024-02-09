@@ -1,14 +1,51 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
+use proc_macro::TokenStream;
+use quote::quote;
+use syn::{Ident, LitStr};
+
+/// # Example
+/// ```
+/// use explode::explode;
+///
+/// let a: [char; 5] = ['h', 'e', 'l', 'l', 'o'];
+/// let b = explode!(hello);
+/// assert_eq!(a, b);
+/// ```
+#[proc_macro]
+pub fn explode(input: TokenStream) -> TokenStream {
+    let Ok(input) = syn::parse::<Input>(input) else {
+        return quote! {
+            compile_error!("expected identifier or string literal")
+        }
+        .into();
+    };
+    let str = input.to_string();
+    let chars = str.chars();
+    quote!([ #(#chars),*]).into()
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+enum Input {
+    Ident(Ident),
+    LitStr(LitStr),
+}
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+impl syn::parse::Parse for Input {
+    fn parse(input: syn::parse::ParseStream) -> syn::parse::Result<Self> {
+        let lookahead = input.lookahead1();
+        if lookahead.peek(LitStr) {
+            input.parse().map(Input::LitStr)
+        } else if lookahead.peek(Ident) {
+            input.parse().map(Input::Ident)
+        } else {
+            Err(lookahead.error())
+        }
+    }
+}
+
+impl ToString for Input {
+    fn to_string(&self) -> String {
+        match self {
+            Input::Ident(ident) => ident.to_string(),
+            Input::LitStr(lit_str) => lit_str.value(),
+        }
     }
 }
