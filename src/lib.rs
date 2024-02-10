@@ -12,11 +12,11 @@ use syn::{Ident, LitStr};
 /// ```
 #[proc_macro]
 pub fn explode(input: TokenStream) -> TokenStream {
-    let Ok(input) = syn::parse::<Input>(input) else {
-        return quote! {
-            compile_error!("expected identifier or string literal")
+    let input = match syn::parse::<Input>(input) {
+        Ok(input) => input,
+        Err(e) => {
+            return e.into_compile_error().into();
         }
-        .into();
     };
     let str = input.to_string();
     let chars = str.chars();
