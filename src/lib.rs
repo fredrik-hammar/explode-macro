@@ -20,7 +20,7 @@ pub fn explode(input: TokenStream) -> TokenStream {
     };
     let str = input.to_string();
     let chars = str.chars();
-    quote!([ #(#chars),*]).into()
+    quote!([ #(#chars),* ]).into()
 }
 
 enum Input {
