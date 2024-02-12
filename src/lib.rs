@@ -1,4 +1,4 @@
-#![doc = include_str!("../README.md")]
+#![doc = include_utils::include_md!("README.md:body")]
 
 use proc_macro::TokenStream;
 use proc_macro2::Span;
