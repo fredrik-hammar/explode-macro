@@ -48,7 +48,7 @@ impl syn::parse::Parse for Input {
 }
 
 trait Explode {
-    type Into: ToTokens;
+    type Into: ToTokens + Into<Exploded>;
     fn explode(&self) -> Vec<Self::Into>;
 }
 
@@ -56,12 +56,13 @@ impl Explode for Input {
     type Into = Exploded;
 
     fn explode(&self) -> Vec<Self::Into> {
-        match self {
-            Input::Ident(ident) => ident.explode().into_iter().map(Into::into).collect(),
-            Input::LitStr(lit_str) => lit_str.explode().into_iter().map(Into::into).collect(),
-            Input::LitByteStr(lit_byte_str) => {
-                lit_byte_str.explode().into_iter().map(Into::into).collect()
-            }
+        return match self {
+            Input::Ident(t) => inner(t),
+            Input::LitStr(t) => inner(t),
+            Input::LitByteStr(t) => inner(t),
+        };
+        fn inner<E: Explode>(e: &E) -> Vec<Exploded> {
+            e.explode().map_collect(Into::into)
         }
     }
 }
@@ -115,22 +116,33 @@ impl Explode for LitByteStr {
 
 trait ExplodeIn {
     type Into: ToTokens;
-    fn explode_in(&self, span: Span) -> Vec<Self::Into>;
+    fn explode_in(self, span: Span) -> Vec<Self::Into>;
 }
 
 impl ExplodeIn for String {
     type Into = LitChar;
-    fn explode_in(&self, span: Span) -> Vec<LitChar> {
+    fn explode_in(self, span: Span) -> Vec<LitChar> {
         let to_lit_char = |ch| LitChar::new(ch, span);
-        self.chars().map(to_lit_char).collect()
+        self.chars().map_collect(to_lit_char)
     }
 }
 
 struct ByteString(Vec<u8>);
 impl ExplodeIn for ByteString {
     type Into = LitByte;
-    fn explode_in(&self, span: Span) -> Vec<LitByte> {
-        let to_lit_byte = |&ch| LitByte::new(ch, span);
-        self.0.iter().map(to_lit_byte).collect()
+    fn explode_in(self, span: Span) -> Vec<LitByte> {
+        let to_lit_byte = |ch| LitByte::new(ch, span);
+        self.0.map_collect(to_lit_byte)
     }
 }
+
+trait MapCollect: IntoIterator + Sized {
+    fn map_collect<F, B, C>(self, f: F) -> C
+    where
+        F: FnMut(Self::Item) -> B,
+        C: FromIterator<B>,
+    {
+        self.into_iter().map(f).collect()
+    }
+}
+impl<T> MapCollect for T where T: IntoIterator {}
