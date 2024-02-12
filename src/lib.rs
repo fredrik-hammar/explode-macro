@@ -1,19 +1,11 @@
+#![doc = include_str!("../README.md")]
+
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::{quote, ToTokens, TokenStreamExt};
 use syn::{parse, Ident, LitByte, LitByteStr, LitChar, LitStr, Token};
 
-/// # Example
-/// ```
-/// use explode::explode;
-///
-/// let expected: [char; 5] = ['h', 'e', 'l', 'l', 'o'];
-/// assert_eq!(expected, explode!(hello));
-/// assert_eq!(expected, explode!("hello"));
-///
-/// let expected: [u8; 5] = [b'h', b'e', b'l', b'l', b'o'];
-/// assert_eq!(expected, explode!(b"hello"));
-/// ```
+/// See [crate] level documentation.
 #[proc_macro]
 pub fn explode(input: TokenStream) -> TokenStream {
     let input = match parse::<Input>(input) {
