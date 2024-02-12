@@ -1,4 +1,4 @@
-# Explode Macro Crate
+# Explode Macro Crate 💥
 
 <!-- ANCHOR: body -->
 Bringing back the venerable LISP explode[^1] function from the past!
