@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::{quote, ToTokens, TokenStreamExt};
-use syn::{Ident, LitByte, LitByteStr, LitChar, LitStr};
+use syn::{parse, Ident, LitByte, LitByteStr, LitChar, LitStr, Token};
 
 /// # Example
 /// ```
@@ -16,7 +16,7 @@ use syn::{Ident, LitByte, LitByteStr, LitChar, LitStr};
 /// ```
 #[proc_macro]
 pub fn explode(input: TokenStream) -> TokenStream {
-    let input = match syn::parse::<Input>(input) {
+    let input = match parse::<Input>(input) {
         Ok(input) => input,
         Err(e) => {
             return e.into_compile_error().into();
@@ -26,14 +26,42 @@ pub fn explode(input: TokenStream) -> TokenStream {
     quote!([ #(#exploded),* ]).into()
 }
 
+#[proc_macro]
+pub fn explode_map(input: TokenStream) -> TokenStream {
+    let MapInput { op, bang, input } = match parse::<MapInput>(input) {
+        Ok(input) => input,
+        Err(e) => {
+            return e.into_compile_error().into();
+        }
+    };
+    let exploded = input.explode();
+    quote!([ #(#op #bang ( #exploded) ),* ]).into()
+}
+
+struct MapInput {
+    op: Ident,
+    bang: Option<Token![!]>,
+    input: Input,
+}
+
+impl parse::Parse for MapInput {
+    fn parse(input: parse::ParseStream) -> parse::Result<Self> {
+        let op = input.parse()?;
+        let bang = input.parse()?;
+        input.parse::<Token![,]>()?;
+        let input = input.parse()?;
+        Ok(MapInput { op, bang, input })
+    }
+}
+
 enum Input {
     Ident(Ident),
     LitStr(LitStr),
     LitByteStr(LitByteStr),
 }
 
-impl syn::parse::Parse for Input {
-    fn parse(input: syn::parse::ParseStream) -> syn::parse::Result<Self> {
+impl parse::Parse for Input {
+    fn parse(input: parse::ParseStream) -> parse::Result<Self> {
         let lookahead = input.lookahead1();
         if lookahead.peek(LitStr) {
             input.parse().map(Input::LitStr)
